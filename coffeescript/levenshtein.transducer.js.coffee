@@ -546,6 +546,13 @@ transducer = (args) ->
   #
   #   distance = w - i + e
   #
+  # It is characteristic of the generated states that i <= w.  Therefore, w - i
+  # provides the number of characters remaining to be inserted before the two
+  # terms are of equal lengths.  Because each insertion has a weight of 1, the
+  # number of characters remaining increases the position's current error by the
+  # same number (of characters remaining).  This is the intuition behind how I
+  # derived the cumulative error of the position of interest.
+  #
   # For every accepting position, it must be the case that w - i <= n - e.  It
   # follows directly that the distance of every accepted position must be no
   # more than n:
@@ -553,9 +560,10 @@ transducer = (args) ->
   # (w - i <= n - e) <=> (w - i + e <= n) <=> (distance <= n)
   #
   # The Levenshtein distance between any two terms is defined as the minimum
-  # edit distance between the two terms.  Therefore, iterate over each position
-  # in an accepting state, and take the minimum distance among all its accepting
-  # positions as the corresponding Levenshtein distance.
+  # edit distance between them.  Therefore, iterate over each position in an
+  # accepting state, and take the minimum distance among all its accepting
+  # positions as the corresponding Levenshtein distance.  This is the intuition
+  # behind how I derieved the minimum distance of the state of interest.
   minimum_distance =
     if algorithm is STANDARD
       (state, w) ->
