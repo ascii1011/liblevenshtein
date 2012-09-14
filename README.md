@@ -42,6 +42,17 @@ while ((pair = matches[i]) !== undefined) {
 }
 ```
 
+If you would like every term returned, for the purpose of weighting how every
+term in your corpus relates to the query term, you need only to set the maximum
+allowed edit distance to `Infinity`.
+
+```javascript
+var max_edit_distance = Infinity;
+var transduce = levenshtein.transducer({dictionary: dictionary, algorithm: algorithm});
+// every term will be returned, weighted according to Levenshtein distance
+var matches = transduce(query_term, max_edit_distance);
+```
+
 If you would prefer to sort the results yourself, or do not care about order,
 you may do the following:
 

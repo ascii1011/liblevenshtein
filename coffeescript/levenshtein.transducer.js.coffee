@@ -542,7 +542,9 @@ transducer = (args) ->
           return true if x isnt 1 and (w - i) <= (n - e)
         return false
 
-  # The distance of each position in a state can be defined as follows:
+  # The distance of each position in a state can be defined as follows, where w
+  # is the length of the query term, i is the boundary of the current position,
+  # and e is the current position's error:
   #
   #   distance = w - i + e
   #
@@ -553,9 +555,9 @@ transducer = (args) ->
   # same number (of characters remaining).  This is the intuition behind how I
   # derived the cumulative error of the position of interest.
   #
-  # For every accepting position, it must be the case that w - i <= n - e.  It
-  # follows directly that the distance of every accepted position must be no
-  # more than n:
+  # For every accepting position, it must be the case that w - i <= n - e, where
+  # n is the maximum allowed edit distance.  It follows directly that the
+  # distance of every accepted position must be no more than n:
   #
   # (w - i <= n - e) <=> (w - i + e <= n) <=> (distance <= n)
   #
