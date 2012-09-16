@@ -72,6 +72,6 @@ The sorting options are as follows:
 3. case_insensitive := Whether to sort the results in a case-insensitive manner
 	 (boolean).
 
-Each option defaults to `true`.  You can get the original behavior of the
-transducer by setting each option to `false` (where the original behavior was to
-return the terms unsorted and excluding their distances).
+Each sorting option defaults to `true`.  You can get the original behavior of
+the transducer by setting each option to `false` (where the original behavior
+was to return the terms unsorted and excluding their distances).
