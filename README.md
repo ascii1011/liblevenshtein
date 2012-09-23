@@ -21,10 +21,10 @@ var transduce = levenshtein.transducer({dictionary: dictionary, algorithm: algor
 var query_term = "mispelled";
 var max_edit_distance = 2;
 
-var matches = transduce(query_term, max_edit_distance); // list of terms matching your query
+var accepted = transduce(query_term, max_edit_distance); // list of terms matching your query
 
 var other_term = "oter";
-var other_matches = transduce(other_term, max_edit_distance); // reuse the transducer
+var other_accepted = transduce(other_term, max_edit_distance); // reuse the transducer
 ```
 
 The default behavior of the transducer is to sort the results, ascendingly, in
@@ -35,7 +35,7 @@ Levenshtein distance from the query term, as follows: `[term, distance]`
 
 ```javascript
 var pair, term, distance, i = 0;
-while ((pair = matches[i]) !== undefined) {
+while ((pair = accepted[i]) !== undefined) {
 	term = pair[0]; distance = pair[1];
 	// do something with `term` and `distance`
 	i += 1;
@@ -50,7 +50,7 @@ allowed edit distance to `Infinity`.
 var max_edit_distance = Infinity;
 var transduce = levenshtein.transducer({dictionary: dictionary, algorithm: algorithm});
 // every term will be returned, weighted according to Levenshtein distance
-var matches = transduce(query_term, max_edit_distance);
+var accepted = transduce(query_term, max_edit_distance);
 ```
 
 If you would prefer to sort the results yourself, or do not care about order,
@@ -60,13 +60,14 @@ you may do the following:
 var transduce = levenshtein.transducer({
   dictionary: dictionary,
   algorithm: algorithm,
-  sort_matches: false
+  sort_accepted: false
 });
 ```
 
 The sorting options are as follows:
 
-1. sort_matches := Whether to sort the transduced terms (boolean).
+1. sort_accepted := Whether to sort the terms accepted and returned by the
+   transducer (boolean).
 2. include_distance := Whether to include the Levenshtein distances with the
 	 transduced terms (boolean).
 3. case_insensitive := Whether to sort the results in a case-insensitive manner

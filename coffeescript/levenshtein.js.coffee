@@ -20,10 +20,15 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ###
 
+'use strict'
+
 STANDARD = 'standard'
 TRANSPOSITION = 'transposition'
 MERGE_AND_SPLIT = 'merge_and_split'
 
+###*
+@namespace Levenshtein distance-related functions and constructors.
+###
 levenshtein = {}
 
 if typeof window isnt 'undefined'

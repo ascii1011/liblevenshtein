@@ -22,152 +22,60 @@ LIST = 'list'
 DAWG = 'dawg'
 
 ###*
-The algorithm for imitating Levenshtein automata was taken from the
-following journal article:
-
-\@ARTICLE{Schulz02faststring,
-  author = {Klaus Schulz and Stoyan Mihov},
-  title = {Fast String Correction with Levenshtein-Automata},
-  journal = {INTERNATIONAL JOURNAL OF DOCUMENT ANALYSIS AND RECOGNITION},
-  year = {2002},
-  volume = {5},
-  pages = {67--85}
-}
-
-As well, this Master Thesis helped me understand its concepts:
-
-  www.fmi.uni-sofia.bg/fmi/logic/theses/mitankin-en.pdf
-
-The supervisor of the student who submitted the thesis was one of the
-authors of the journal article, above.
-
-The algorithm for constructing a DAWG (Direct Acyclic Word Graph) from the
-input dictionary of words (DAWGs are otherwise known as an MA-FSA, or
-Minimal Acyclic Finite-State Automata), was taken and modified from the
-following blog from Steve Hanov:
-
-  http://stevehanov.ca/blog/index.php?id=115
-
-The algorithm therein was taken from the following paper:
-
-\@MISC{Daciuk00incrementalconstruction,
-  author = {Jan Daciuk and Bruce W. Watson and Richard E. Watson and Stoyan Mihov},
-  title = {Incremental Construction of Minimal Acyclic Finite-State Automata},
-  year = {2000}
-}
-
-@param {{
-  dictionary: !(Array.<string>|Dawg),
-  sorted: ?boolean,
-  algorithm: ?string,
-  sort_accepted: ?boolean,
-  include_distance: ?boolean,
-  case_insensitive: ?boolean
-}}
+# The algorithm for imitating Levenshtein automata was taken from the
+# following journal article:
+#
+# @ARTICLE{Schulz02faststring,
+#   author = {Klaus Schulz and Stoyan Mihov},
+#   title = {Fast String Correction with Levenshtein-Automata},
+#   journal = {INTERNATIONAL JOURNAL OF DOCUMENT ANALYSIS AND RECOGNITION},
+#   year = {2002},
+#   volume = {5},
+#   pages = {67--85}
+# }
+#
+# As well, this Master Thesis helped me understand its concepts:
+#
+#   www.fmi.uni-sofia.bg/fmi/logic/theses/mitankin-en.pdf
+#
+# The supervisor of the student who submitted the thesis was one of the
+# authors of the journal article, above.
+#
+# The algorithm for constructing a DAWG (Direct Acyclic Word Graph) from the
+# input dictionary of words (DAWGs are otherwise known as an MA-FSA, or
+# Minimal Acyclic Finite-State Automata), was taken and modified from the
+# following blog from Steve Hanov:
+#
+#   http://stevehanov.ca/blog/index.php?id=115
+#
+# The algorithm therein was taken from the following paper:
+#
+# @MISC{Daciuk00incrementalconstruction,
+#   author = {Jan Daciuk and Bruce W. Watson and Richard E. Watson and Stoyan Mihov},
+#   title = {Incremental Construction of Minimal Acyclic Finite-State Automata},
+#   year = {2000}
+# }
 ###
 transducer = (args) ->
-
-  ###*
-  Dictionary of words available to the transducer. These are what will be
-  evaluated and returned, and may be specified as either an Array.<string> or a
-  Dawg. If an Array.<string> is used as the dictionary, it will be converted to
-  a Dawg; if the Array.<string> is not sorted, it will be sorted before being
-  converted to a Dawg.
-
-  @type {!(Array.<string>|Dawg)}
-  ###
-  dictionary = args['dictionary']
-
-  ###*
-  Specifies whether the dictionary is sorted. This is only useful when the
-  dictionary is of type Array.<string>, and is ignored when it is of type Dawg.
-
-  @type {?boolean}
-  ###
-  sorted = args['sorted']
-
-  ###*
-  Dictates which algorithm to use, whether it be "standard", "transposition", or
-  "merge_and_split".  If unspecified, this will default to "standard".  The
-  explanations of each type is given below:
-
-  1. "standard" := Levenshtein distance, including insertions, deletions, and
-    substitutions as elementary edit operations. This is the traditional edit
-    distance metric.
-  2. "transposition" := Levenshtein distance, including insertions, deletions,
-    substitutions, and transpositions as elementary edit operations. This is
-    useful, primarily, in typesetting applications.
-  3. "merge_and_split" := Levenshtein distance, including insertions, deletions,
-    substitutions, merges, and splits as elementary edit operations. This is
-    useful, primarily, in OCR applications.
-
-  @type {?string}
-  ###
-  algorithm = args['algorithm']
-
-  ###*
-  Whether to sort the terms accepted by the transducer. If left unspecified,
-  this defaults to `true`.
-  
-  @type {?boolean}
-  ###
-  sort_accepted = args['sort_accepted']
-
-  ###*
-  Whether to include the distance metrics with the accepted terms. If left
-  unspecified, this defaults to `true`.
-
-  @type {?boolean}
-  ###
+  dictionary       = args['dictionary']
+  sorted           = args['sorted']
+  dictionary_type  = args['dictionary_type']
+  algorithm        = args['algorithm']
+  sort_matches     = args['sort_matches']
   include_distance = args['include_distance']
-
-  ###*
-  Whether to sort the accepted terms in a case-insensitive manner. If left
-  unspecified, this defaults to `true`.
-
-  @type {?boolean}
-  ###
   case_insensitive = args['case_insensitive']
 
   throw new Error('No dictionary was specified') unless dictionary
   unless dictionary instanceof Array or dictionary instanceof Dawg
     throw new Error('dictionary must be either an Array or levenshtein.Dawg')
 
-  if sorted? and typeof sorted isnt 'boolean'
-    throw new Error("expected 'sorted' to be of type 'boolean', received '#{typeof sorted}'")
+  sorted = false unless typeof sorted is 'boolean'
+  dictionary_type = LIST unless dictionary_type in [LIST, DAWG]
+  algorithm = STANDARD unless algorithm in [STANDARD, TRANSPOSITION, MERGE_AND_SPLIT]
+  sort_matches = true unless typeof sort_matches is 'boolean'
+  include_distance = true unless typeof include_distance is 'boolean'
+  case_insensitive = true unless typeof case_insensitive is 'boolean'
 
-  if algorithm? and (typeof algorithm isnt 'string' or algorithm not in [STANDARD, TRANSPOSITION, MERGE_AND_SPLIT])
-    throw new Error("unsupported value of 'algorithm': '#{algorithm}'")
-
-  if sort_accepted? and typeof sort_accepted isnt 'boolean'
-    throw new Error("expected 'sort_accepted' to be of type 'boolean', received '#{typeof sort_accepted}'")
-
-  if include_distance? and typeof include_distance isnt 'boolean'
-    throw new Error("expected 'include_distance' to be of type 'boolean', received '#{typeof include_distance}'")
-
-  if case_insensitive? and typeof case_insensitive isnt 'boolean'
-    throw new Error("expected 'case_insensitive' to be of type 'boolean', received '#{typeof case_insensitive}'")
-
-  sorted ?= false
-  algorithm ?= STANDARD
-  sort_accepted ?= true
-  include_distance ?= true
-  case_insensitive ?= true
-
-  ###*
-  Returns the first index corresponding to a `true` value within the
-  characteristic vector, beginning at offset `i` and ending at `i + k`. The
-  index begins at `0` for `i`, and ends at `k` for `i + k`.  If no element
-  corresponds to a `true` value within the range `i` to `i + k`, the value `-1`
-  is returned.
-
-  @param {Array.<boolean>} vector Characteristic vector.
-  @param {number} k Number of elements to examine.
-  @param {number} i Offset of where to begin traversing the characteristic
-    vector, which must be no greater than k.
-  @return {number} The first index within the given range corresponding to
-    `true`, or `-1` if none exists.
-  ###
   index_of = (vector, k, i) ->
     j = 0
     while j < k
@@ -175,18 +83,6 @@ transducer = (args) ->
       j += 1
     return -1
 
-  ###*
-  Returns a position transition function, which maps positions into states
-  according to the specified algorithm.
-
-  @param {number} n Maximum allowed edit distance.
-  @return {function(Array.<number>, Array.<boolean>, number) : Array.<Array,<number>>}
-    The position transition function corresponding to the specified algorithm.
-    The first parameter corresponds to the current position, the second
-    corresponds to a characteristic vector at the minimal boundary of the
-    current state, and the third is the offset with which to relabel the
-    boundary of the current position.
-  ###
   transition_for_position = switch algorithm
     when STANDARD then (n) ->
       ([i,e], vector, offset) ->
@@ -516,8 +412,6 @@ transducer = (args) ->
       (state) ->
         m = 0
         while x = state[m]
-          # TODO: Experiment with whether it is faster to perform a linear scan
-          # rather than invoking a method call, to find the value for `n`.
           [i,e] = x; n = bisect_error_right(state, e, m)
           while y = state[n]
             [j,f] = y
@@ -623,13 +517,11 @@ transducer = (args) ->
       else
         null
 
-  if dictionary instanceof Dawg
-    dawg = dictionary
-  else if dictionary instanceof Array
+  if dictionary_type is LIST
     dictionary.sort() unless sorted
     dawg = new Dawg(dictionary)
   else
-    throw new Error("Unsupported dictionary type: #{typeof dictionary}")
+    dawg = dictionary
 
   characteristic_vector = (x, term, k, i) ->
     vector = []; j = 0
@@ -679,66 +571,66 @@ transducer = (args) ->
       (state, w) ->
         minimum = Infinity
         for [i,e] in state
-          d = w - i + e
-          minimum = d if d < minimum
+          distance = w - i + e
+          minimum = distance if distance < minimum
         minimum
     else
       (state, w) ->
         minimum = Infinity
         for [i,e,x] in state
-          d = w - i + e
-          minimum = d if x isnt 1 and d < minimum
+          distance = w - i + e
+          minimum = distance if x isnt 1 and distance < minimum
         minimum
 
   insert_match =
-    if sort_accepted
+    if sort_matches
       if include_distance
         if case_insensitive
-          (accepted, term, distance) ->
-            l = 0; u = accepted.length; downcased = term.toLowerCase()
+          (matches, match, distance) ->
+            l = 0; u = matches.length; downcased = match.toLowerCase()
             while l < u
-              i = (l + u) >> 1; [w,d] = accepted[i]
+              i = (l + u) >> 1; [w,d] = matches[i]
               if (d - distance || w.toLowerCase().localeCompare(downcased)) < 0
                 l = i + 1
               else
                 u = i
-            accepted.splice(l, 0, [term, distance])
+            matches.splice(l, 0, [match, distance])
         else
-          (accepted, term, distance) ->
-            l = 0; u = accepted.length
+          (matches, match, distance) ->
+            l = 0; u = matches.length
             while l < u
-              i = (l + u) >> 1; [w,d] = accepted[i]
-              if (d - distance || w.localeCompare(term)) < 0
+              i = (l + u) >> 1; [w,d] = matches[i]
+              if (d - distance || w.localeCompare(match)) < 0
                 l = i + 1
               else
                 u = i
-            accepted.splice(l, 0, [term, distance])
+            matches.splice(l, 0, [match, distance])
       else
         if case_insensitive
-          (accepted, term) ->
-            l = 0; u = accepted.length; downcased = term.toLowerCase()
+          (matches, match) ->
+            l = 0; u = matches.length; downcased = match.toLowerCase()
             while l < u
-              i = (l + u) >> 1; [w,d] = accepted[i]
+              i = (l + u) >> 1; [w,d] = matches[i]
               if w.toLowerCase().localeCompare(downcased) < 0
                 l = i + 1
               else
                 u = i
-            accepted.splice(l, 0, term)
+            matches.splice(l, 0, match)
         else
-          (accepted, term) ->
-            l = 0; u = accepted.length
+          (matches, match) ->
+            l = 0; u = matches.length
             while l < u
-              i = (l + u) >> 1; [w,d] = accepted[i]
-              if w.localeCompare(term) < 0
+              i = (l + u) >> 1; [w,d] = matches[i]
+              if w.localeCompare(match) < 0
                 l = i + 1
               else
                 u = i
-            accepted.splice(l, 0, term)
+            matches.splice(l, 0, match)
     else
       if include_distance
-        (accepted, term, distance) -> accepted.push([term, distance])
+        (matches, match, distance) -> matches.push([match, distance])
       else
-        (accepted, term) -> accepted.push(term)
+        (matches, match) -> matches.push(match)
 
   initial_state =
     if algorithm is STANDARD
@@ -756,7 +648,7 @@ transducer = (args) ->
           vector.push(false)
           l += 1
         vectors[c] = vector
-      for d, vector of vectors
+      for d, vector in vectors
         vector.push(c is d)
       j += 1
     vectors
@@ -765,25 +657,27 @@ transducer = (args) ->
     (term, n) ->
       w = term.length
       transition = transition_for_state(n)
-      accepted = []; stack = [['', dawg['root'], initial_state]]
+      matches = []; stack = [['', dawg['root'], initial_state]]
       while stack.length > 0
         [V, q_D, M] = stack.pop(); i = M[0][0]
         a = 2 * n + 1; b = w - i
         k = if a < b then a else b
+        vectors = profile(term, k, i)
         for x, next_q_D of q_D['edges']
-          vector = characteristic_vector(x, term, k, i)
+          #vector = characteristic_vector(x, term, k, i)
+          vector = vectors[x]
           next_M = transition(M, vector)
           if next_M
             next_V = V + x
             stack.push([next_V, next_q_D, next_M])
-            if next_q_D['is_final'] and (d = minimum_distance(next_M, w)) <= n
-              insert_match(accepted, next_V, d)
-      accepted
+            if next_q_D['is_final'] and (distance = minimum_distance(next_M, w)) <= n
+              insert_match(matches, next_V, distance)
+      matches
   else
     (term, n) ->
       w = term.length
       transition = transition_for_state(n)
-      accepted = []; stack = [['', dawg['root'], initial_state]]
+      matches = []; stack = [['', dawg['root'], initial_state]]
       while stack.length > 0
         [V, q_D, M] = stack.pop(); i = M[0][0]
         a = 2 * n + 1; b = w - i
@@ -795,8 +689,8 @@ transducer = (args) ->
             next_V = V + x
             stack.push([next_V, next_q_D, next_M])
             if next_q_D['is_final'] and is_final(next_M, w, n)
-              insert_match(accepted, next_V)
-      accepted
+              insert_match(matches, next_V)
+      matches
 
 levenshtein['transducer'] = transducer
 
